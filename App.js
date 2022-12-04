@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Camera } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
+import ImageColors from 'react-native-image-colors'
 import { manipulateAsync, FlipType, SaveFormat } from "expo-image-manipulator";
 import Button from "./components/Button";
 import TakenImage from "./components/TakenImage";
@@ -12,6 +13,8 @@ export default function App() {
   const [image, setImage] = useState(null);
   const [bottomImageUri, setBottomImageUri] = useState("");
   const [topImageUri, setTopImageUri] = useState("");
+  const [bottomImageColorCode, setBottomImageColorCode] = useState("");
+  const [topImageColorCode, setTopImageColorCode] = useState("");
   const [hasPermission, setHasPermission] = useState(false);
   const cameraRef = useRef(null);
 
@@ -80,19 +83,32 @@ export default function App() {
 
       if (position == 'bottom') {
         setBottomImageUri(manipResult.uri);
-        // console.log("bottom: ", manipResult.uri);
       }
 
       if (position == "top") {
         setTopImageUri(manipResult.uri);
-        // console.log("top: ", manipResult.uri);
       }
     };
 
-    setMasksImagesUris(110, 70, "top");
+    setMasksImagesUris(300, 70, "top");
     setMasksImagesUris(110, 70, "bottom");
-
   };
+  
+  const fetchColors = async (position) => {
+    if (position == 'bottom') {
+      const result = await ImageColors.getColors(bottomImageUri);
+      setBottomImageColorCode(result.dominant);
+    } else {
+      const result = await ImageColors.getColors(topImageUri);
+      setTopImageColorCode(result.dominant);
+    }
+  }
+  
+  fetchColors('top');
+  fetchColors('bottom');
+
+  console.log(topImageColorCode, ': topImageColorCode');
+  console.log(bottomImageColorCode, ': bottomImageColorCode');
   
   if (!hasPermission) {
     return (
