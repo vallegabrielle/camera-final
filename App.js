@@ -35,6 +35,7 @@ export default function App() {
   function goInitialScreen() {
     setShowCamera(false);
     setShowInitialScreen(true);
+    setImage(null);
   }
 
   async function saveImage() {
@@ -61,55 +62,106 @@ export default function App() {
     }
   }
 
-  onPictureSaved = async (photo) => {
+  onPictureSaved = (photo) => {
     
     setImage(photo.uri);
     
-    const setMasksImagesUris = async (x, y, position) => { 
-      const manipResult = await manipulateAsync(
-        photo.uri,
-        [
-          {
-            crop: {
-              height: 1000,
-              width: 1000,
-              originX: x,
-              originY: y,
-            },
+    setMasksImagesUris(450, 350, "top", photo);
+    setMasksImagesUris(1800, 2850, "bottom", photo);
+
+    
+    fetchColors('top');
+    fetchColors('bottom');
+    
+    console.log(bottomImageColorCode, ': bottomImageColorCode');
+    console.log(topImageColorCode, ': topImageColorCode');
+  };
+
+  const setMasksImagesUris = async (x, y, position, photo) => { 
+    const manipResult = await manipulateAsync(
+      photo.uri,
+      [
+        {
+          crop: {
+            height: 800,
+            width: 800,
+            originX: x,
+            originY: y,
           },
-        ],
-        { compress: 1, format: SaveFormat.PNG }
-      );
+        },
+      ],
+      { compress: 1, format: SaveFormat.PNG }
+    );
 
-      if (position == 'bottom') {
-        setBottomImageUri(manipResult.uri);
-      }
+    if (position == 'bottom') {
+      setBottomImageUri(manipResult.uri);
+    }
 
-      if (position == "top") {
-        setTopImageUri(manipResult.uri);
-      }
-    };
-
-    setMasksImagesUris(300, 70, "top");
-    setMasksImagesUris(110, 70, "bottom");
+    if (position == "top") {
+      setTopImageUri(manipResult.uri);
+    }
   };
   
   const fetchColors = async (position) => {
+    
     if (position == 'bottom') {
+      
       const result = await ImageColors.getColors(bottomImageUri);
-      setBottomImageColorCode(result.dominant);
-    } else {
-      const result = await ImageColors.getColors(topImageUri);
-      setTopImageColorCode(result.dominant);
-    }
-  }
-  
-  fetchColors('top');
-  fetchColors('bottom');
+      const hsvCode = getHsvColorCode(result.dominant);
+      console.log(hsvCode, ": hsvCode");
+      setBottomImageColorCode(hsvCode);
 
-  console.log(topImageColorCode, ': topImageColorCode');
-  console.log(bottomImageColorCode, ': bottomImageColorCode');
+    } else {
+      
+      const result = await ImageColors.getColors(topImageUri);
+      const hsvCode = getHsvColorCode(result.dominant);
+      console.log(hsvCode, ": hsvCode");
+      setTopImageColorCode(hsvCode);
+    }
+  };
   
+  function getHsvColorCode(hex) {
+
+    const rgbCode = convertHexToRgb(hex);
+    const hsvCode = convertRgbToHsv(rgbCode.r, rgbCode.g, rgbCode.b)
+
+    return hsvCode;
+  }
+
+  function convertHexToRgb(hex) {
+    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  }
+
+  function convertRgbToHsv(r, g, b) {
+
+    r /= 255, g /= 255, b /= 255;
+  
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var h, s, v = max;
+  
+    var d = max - min;
+    s = max == 0 ? 0 : d / max;
+  
+    if (max == min) {
+      h = 0; // achromatic
+    } else {
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+  
+      h /= 6;
+    }
+  
+    return [ h, s, v ];
+  }
+
   if (!hasPermission) {
     return (
       <View style={styles.default}>
